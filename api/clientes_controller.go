@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"rinha2024q1crebito"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -19,8 +20,8 @@ type TransacaoResponse struct {
 }
 
 type ExtratoResponse struct {
-	Saldo             ExtratoSaldoResponse               `json:"saldo"`
-	UltimasTransacoes []ExtratoUltimasTransacoesResponse `json:"ultimas_transacoes"`
+	Saldo             *ExtratoSaldoResponse               `json:"saldo"`
+	UltimasTransacoes []*ExtratoUltimasTransacoesResponse `json:"ultimas_transacoes"`
 }
 type ExtratoSaldoResponse struct {
 	Total       int       `json:"total"`
@@ -35,59 +36,95 @@ type ExtratoUltimasTransacoesResponse struct {
 }
 
 type ClientesController struct {
+	crebitoService rinha2024q1crebito.CrebitoService
 }
 
-func NewClientesController() *ClientesController {
-	return &ClientesController{}
+func NewClientesController(crebitoService rinha2024q1crebito.CrebitoService) *ClientesController {
+	return &ClientesController{
+		crebitoService: crebitoService,
+	}
 }
 
-func (*ClientesController) PostClientesIdTransacoes(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	clienteId := ps.ByName("id")
-
-	var transacaoRequest TransacaoRequest
-	err := parseJsonRequest(r, &transacaoRequest)
+func (cc *ClientesController) PostClientesIdTransacoes(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	clientIdNum, err := parseInt(ps.ByName("id"))
 	if err != nil {
 		sendErrorResponse(err, w)
 		return
 	}
 
-	// TODO: chama o serviço de transações
-	_ = clienteId
+	clientId, err := rinha2024q1crebito.NewClientID(clientIdNum)
+	if err != nil {
+		sendErrorResponse(err, w)
+		return
+	}
+	var transacaoRequest TransacaoRequest
+	err = parseJsonRequest(r, &transacaoRequest)
+	if err != nil {
+		sendErrorResponse(err, w)
+		return
+	}
+
+	tReq, err := rinha2024q1crebito.NewTransactionRequest(
+		clientId,
+		transacaoRequest.Valor,
+		transacaoRequest.Tipo,
+		transacaoRequest.Descricao,
+	)
+	if err != nil {
+		sendErrorResponse(err, w)
+		return
+	}
+
+	balanceUpdate, err := cc.crebitoService.DoTransaction(tReq)
+	if err != nil {
+		sendErrorResponse(err, w)
+		return
+	}
 
 	res := TransacaoResponse{
-		Limite: 1000,
-		Saldo:  500,
+		Limite: balanceUpdate.Limite,
+		Saldo:  balanceUpdate.Saldo,
 	}
 
 	sendOkJsonResponse(res, w)
 }
 
-func (*ClientesController) GetClientesIdExtrato(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	clienteId := ps.ByName("id")
+func (cc *ClientesController) GetClientesIdExtrato(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	clientIdNum, err := parseInt(ps.ByName("id"))
+	if err != nil {
+		sendErrorResponse(err, w)
+		return
+	}
 
-	// TODO: chama o serviço de extrato
-	_ = clienteId
+	clientId, err := rinha2024q1crebito.NewClientID(clientIdNum)
+	if err != nil {
+		sendErrorResponse(err, w)
+		return
+	}
+
+	extratoCliente, err := cc.crebitoService.GetExtratoCliente(clientId)
+	if err != nil {
+		sendErrorResponse(err, w)
+		return
+	}
+
+	ultimasTransacoes := make([]*ExtratoUltimasTransacoesResponse, 0, len(extratoCliente.Transacoes))
+	for _, t := range extratoCliente.Transacoes {
+		ultimasTransacoes = append(ultimasTransacoes, &ExtratoUltimasTransacoesResponse{
+			Valor:       t.Valor,
+			Tipo:        t.Tipo,
+			Descricao:   t.Descricao,
+			RealizadaEm: t.RealizadaEm,
+		})
+	}
 
 	res := ExtratoResponse{
-		Saldo: ExtratoSaldoResponse{
-			Total:       -9098,
-			DataExtrato: time.Now(),
-			Limite:      100000,
+		Saldo: &ExtratoSaldoResponse{
+			Total:       extratoCliente.Saldo.Total,
+			DataExtrato: extratoCliente.Saldo.DataExtrato,
+			Limite:      extratoCliente.Saldo.Limite,
 		},
-		UltimasTransacoes: []ExtratoUltimasTransacoesResponse{
-			{
-				Valor:       10,
-				Tipo:        "c",
-				Descricao:   "descricao",
-				RealizadaEm: time.Now(),
-			},
-			{
-				Valor:       90000,
-				Tipo:        "d",
-				Descricao:   "descricao",
-				RealizadaEm: time.Now(),
-			},
-		},
+		UltimasTransacoes: ultimasTransacoes,
 	}
 
 	sendOkJsonResponse(res, w)

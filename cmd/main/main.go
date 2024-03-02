@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"rinha2024q1crebito"
 	"rinha2024q1crebito/api"
 	"strconv"
 
@@ -29,7 +30,9 @@ func run() error {
 		return err
 	}
 
-	apiHandler := api.NewApiHandler()
+	crebitoService := rinha2024q1crebito.NewCrebitoServiceImpl(nil)
+
+	apiHandler := api.NewApiHandler(crebitoService)
 	server := &http.Server{
 		Addr:    ":" + strconv.Itoa(environment.PORT),
 		Handler: apiHandler,

@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"rinha2024q1crebito"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -16,7 +17,7 @@ var (
 	_ http.Handler = (*ApiHandler)(nil)
 )
 
-func NewApiHandler() *ApiHandler {
+func NewApiHandler(crebitoService rinha2024q1crebito.CrebitoService) *ApiHandler {
 
 	apiHandler := &ApiHandler{
 		router: httprouter.New(),
@@ -27,7 +28,7 @@ func NewApiHandler() *ApiHandler {
 	apiHandler.router.GET("/hello/:name", apiHandler.Hello)
 
 	// Endpoints para clientes "/clientes/"
-	clientesController := NewClientesController()
+	clientesController := NewClientesController(crebitoService)
 	apiHandler.router.POST("/clientes/:id/transacoes", clientesController.PostClientesIdTransacoes)
 	apiHandler.router.GET("/clientes/:id/extrato", clientesController.GetClientesIdExtrato)
 
