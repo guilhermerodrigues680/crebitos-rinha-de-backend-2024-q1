@@ -14,9 +14,11 @@ import (
 )
 
 type Environment struct {
-	Port         int    `env:"PORT,default=3000"`
-	DbHostname   string `env:"DB_HOSTNAME,required=true"`
-	ApiUseDbFunc bool   `env:"API_USE_DB_FUNC,default=false"`
+	Port              int    `env:"PORT,default=3000"`
+	DbHostname        string `env:"DB_HOSTNAME,required=true"`
+	DbInitialPoolSize int    `env:"DB_INITIAL_POOL_SIZE,default=1"`
+	DbMaxPoolSize     int    `env:"DB_MAX_POOL_SIZE,default=1"`
+	ApiUseDbFunc      bool   `env:"API_USE_DB_FUNC,default=false"`
 }
 
 func main() {
@@ -37,7 +39,12 @@ func run() error {
 
 	// Postgres
 
-	postgresClient, err := postgres.NewPostgresClient(context.Background(), environment.DbHostname)
+	postgresClient, err := postgres.NewPostgresClient(
+		context.Background(),
+		environment.DbHostname,
+		environment.DbInitialPoolSize,
+		environment.DbMaxPoolSize,
+	)
 	if err != nil {
 		return err
 	}

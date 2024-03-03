@@ -43,10 +43,10 @@ func NewCrebitoPostgresRepository(client *PostgresClient, apiUseDbFunc bool) *Cr
 
 func (cpr *CrebitoPostgresRepository) Creditar(ctx context.Context, clientId int, valor int, descricao string) (*rinha2024q1crebito.AtualizacaoSaldo, error) {
 	atualizacaoSaldoRow := AtualizacaoSaldoRow{}
-	err := cpr.client.conn.
+	err := cpr.client.Conn().
 		QueryRow(
 			ctx,
-			"SELECT creditar($1, $2, $3)",
+			"SELECT * from creditar($1, $2, $3)",
 			clientId,
 			valor,
 			descricao,
@@ -73,10 +73,10 @@ func (cpr *CrebitoPostgresRepository) Creditar(ctx context.Context, clientId int
 
 func (cpr *CrebitoPostgresRepository) Debitar(ctx context.Context, clientId int, valor int, descricao string) (*rinha2024q1crebito.AtualizacaoSaldo, error) {
 	atualizacaoSaldoRow := AtualizacaoSaldoRow{}
-	err := cpr.client.conn.
+	err := cpr.client.Conn().
 		QueryRow(
 			ctx,
-			"SELECT debitar($1, $2, $3)",
+			"SELECT * from debitar($1, $2, $3)",
 			clientId,
 			valor,
 			descricao,
@@ -124,7 +124,7 @@ func (cpr *CrebitoPostgresRepository) GetExtratoCliente(clientId int) (*rinha202
 	}
 
 	var clientLimit int
-	err := cpr.client.conn.
+	err := cpr.client.Conn().
 		QueryRow(
 			context.Background(),
 			"SELECT limite FROM clientes WHERE id = $1",
@@ -136,7 +136,7 @@ func (cpr *CrebitoPostgresRepository) GetExtratoCliente(clientId int) (*rinha202
 	}
 
 	extratoRow := ExtratoRow{}
-	err = cpr.client.conn.
+	err = cpr.client.Conn().
 		QueryRow(
 			context.Background(),
 			"SELECT valor, NOW() FROM saldos WHERE cliente_id = $1",
@@ -151,7 +151,7 @@ func (cpr *CrebitoPostgresRepository) GetExtratoCliente(clientId int) (*rinha202
 	}
 
 	transacoes := []*rinha2024q1crebito.ExtratoTransacao{}
-	rows, err := cpr.client.conn.
+	rows, err := cpr.client.Conn().
 		Query(
 			context.Background(),
 			"SELECT valor, tipo, descricao, realizada_em FROM transacoes WHERE cliente_id = $1",

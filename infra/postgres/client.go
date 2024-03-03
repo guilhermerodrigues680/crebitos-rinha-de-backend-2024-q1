@@ -5,36 +5,39 @@ import (
 	"log"
 	"rinha2024q1crebito"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PostgresClient struct {
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
-func NewPostgresClient(ctx context.Context, dbHostname string) (*PostgresClient, error) {
-	// TODO: Trocar para pgxpool
-	// DB_INITIAL_POOL_SIZE
-	// DB_MAX_POOL_SIZE
-
-	connConf, err := pgx.ParseConfig("postgres://admin:123@" + dbHostname + ":5432/rinha")
+func NewPostgresClient(ctx context.Context, dbHostname string, DbInitialPoolSize int, DbMaxPoolSize int) (*PostgresClient, error) {
+	poolConf, err := pgxpool.ParseConfig("postgres://admin:123@" + dbHostname + ":5432/rinha")
 	if err != nil {
 		return nil, rinha2024q1crebito.NewErrInternal("erro no parse da configuração de conexão", err)
 	}
 
-	conn, err := pgx.ConnectConfig(ctx, connConf)
+	poolConf.MinConns = int32(DbInitialPoolSize)
+	poolConf.MaxConns = int32(DbMaxPoolSize)
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConf)
 	if err != nil {
 		return nil, rinha2024q1crebito.NewErrInternal("erro na conexão com banco de dados", err)
 	}
 	log.Println("Conexão com banco de dados estabelecida")
 
-	err = conn.Ping(ctx)
+	err = pool.Ping(ctx)
 	if err != nil {
 		return nil, rinha2024q1crebito.NewErrInternal("erro no ping do banco de dados", err)
 	}
 	log.Println("Ping do banco de dados realizado")
 
 	return &PostgresClient{
-		conn: conn,
+		pool: pool,
 	}, nil
+}
+
+func (pc *PostgresClient) Conn() *pgxpool.Pool {
+	return pc.pool
 }
