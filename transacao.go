@@ -11,7 +11,7 @@ type TransactionRequest struct {
 	Valor int
 
 	// deve ser apenas c para crédito ou d para débito.
-	Tipo string
+	Tipo string // XXX: usar rune?
 
 	// deve ser uma string de 1 a 10 caracteres.
 	Descricao string

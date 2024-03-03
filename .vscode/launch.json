@@ -11,8 +11,9 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/main/main.go",
             "env": {
-                // "PORT": "3000", // porta padrão
-                "PORT": "9999", // porta para testes
+                "PORT": "9999", // sobrescreve a porta padrão com a porta para testes
+                "DB_HOSTNAME": "localhost", // obrigatório
+                "API_USE_DB_FUNC": "true", // habilita o uso de funções no banco, por padrão é desabilitado
             }
         }
     ]

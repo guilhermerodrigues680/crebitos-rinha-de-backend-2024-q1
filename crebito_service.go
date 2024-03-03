@@ -1,12 +1,14 @@
 package rinha2024q1crebito
 
 import (
+	"context"
 	"log"
 )
 
 type CrebitoRepository interface {
-	Creditar(clientId, valor int, descricao string) (*AtualizacaoSaldo, error)
-	Debitar(clientId, valor int, descricao string) (*AtualizacaoSaldo, error)
+	Creditar(ctx context.Context, clientId, valor int, descricao string) (*AtualizacaoSaldo, error)
+	Debitar(ctx context.Context, clientId, valor int, descricao string) (*AtualizacaoSaldo, error)
+	GetExtratoCliente(clientId int) (*Extrato, error)
 }
 
 type CrebitoService interface {
@@ -35,13 +37,17 @@ func (cs *CrebitoServiceImpl) DoTransaction(transactionReq *TransactionRequest) 
 		return nil, err
 	}
 
+	ctx := context.Background()
+
 	if transactionReq.Tipo == "c" {
 		return cs.crebitoRepo.Creditar(
+			ctx,
 			transactionReq.ClientId.Value(),
 			transactionReq.Valor,
 			transactionReq.Descricao)
 	} else if transactionReq.Tipo == "d" {
 		return cs.crebitoRepo.Debitar(
+			ctx,
 			transactionReq.ClientId.Value(),
 			transactionReq.Valor,
 			transactionReq.Descricao)
@@ -52,5 +58,10 @@ func (cs *CrebitoServiceImpl) DoTransaction(transactionReq *TransactionRequest) 
 }
 
 func (cs *CrebitoServiceImpl) GetExtratoCliente(clientId ClientID) (*Extrato, error) {
-	panic("not implemented")
+	err := clientId.validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return cs.crebitoRepo.GetExtratoCliente(clientId.Value())
 }

@@ -8,13 +8,13 @@ type ClientID struct {
 
 func NewClientID(id int) (ClientID, error) {
 	c := ClientID{id: id}
-	if err := c.Validar(); err != nil {
+	if err := c.validate(); err != nil {
 		return ClientID{}, err
 	}
 	return c, nil
 }
 
-func (c *ClientID) Validar() error {
+func (c *ClientID) validate() error {
 	if c.id < 1 {
 		return fmt.Errorf(
 			"id do cliente deve ser um número inteiro positivo: %w",
