@@ -109,7 +109,12 @@ func (cpr *CrebitoPostgresRepository) Debitar(ctx context.Context, clientId int,
 
 func (cpr *CrebitoPostgresRepository) GetExtratoCliente(clientId int) (*rinha2024q1crebito.Extrato, error) {
 
-	// FIXME: Fazer tudo em uma única transação para garantir consistência
+	// Faz tudo em uma única transação para garantir consistência
+	tx, err := cpr.client.Conn().Begin(context.TODO())
+	if err != nil {
+		return nil, rinha2024q1crebito.NewErrInternal("erro ao buscar extrato, iniciar transação", err)
+	}
+	defer tx.Rollback(context.TODO())
 
 	type ExtratoRow struct {
 		Valor       int
@@ -124,7 +129,7 @@ func (cpr *CrebitoPostgresRepository) GetExtratoCliente(clientId int) (*rinha202
 	}
 
 	var clientLimit int
-	err := cpr.client.Conn().
+	err = tx.
 		QueryRow(
 			context.Background(),
 			"SELECT limite FROM clientes WHERE id = $1",
@@ -132,11 +137,16 @@ func (cpr *CrebitoPostgresRepository) GetExtratoCliente(clientId int) (*rinha202
 		).
 		Scan(&clientLimit)
 	if err != nil {
+		// Checa se o erro é de cliente não encontrado
+		if err.Error() == "no rows in result set" {
+			return nil, fmt.Errorf("cliente não encontrado: (%w)", rinha2024q1crebito.ErrNotFound)
+		}
+
 		return nil, rinha2024q1crebito.NewErrInternal("erro ao buscar extrato, buscar limite", err)
 	}
 
 	extratoRow := ExtratoRow{}
-	err = cpr.client.Conn().
+	err = tx.
 		QueryRow(
 			context.Background(),
 			"SELECT valor, NOW() FROM saldos WHERE cliente_id = $1",
@@ -151,7 +161,7 @@ func (cpr *CrebitoPostgresRepository) GetExtratoCliente(clientId int) (*rinha202
 	}
 
 	transacoes := []*rinha2024q1crebito.ExtratoTransacao{}
-	rows, err := cpr.client.Conn().
+	rows, err := tx.
 		Query(
 			context.Background(),
 			"SELECT valor, tipo, descricao, realizada_em FROM transacoes WHERE cliente_id = $1",
