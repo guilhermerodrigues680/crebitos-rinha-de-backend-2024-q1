@@ -80,13 +80,15 @@ func sendErrorResponseWithStatusCode(httpStatus int, vErr error, w http.Response
 func sendErrorResponse(vErr error, w http.ResponseWriter) error {
 	httpStatus := getErrorHTTPStatus(vErr)
 
-	log.Println(
-		"http request ended with error response",
-		"error",
-		vErr.Error(),
-		"http_status",
-		httpStatus,
-	)
+	if httpStatus >= http.StatusInternalServerError {
+		log.Println(
+			"http request ended with error response",
+			"error",
+			vErr.Error(),
+			"http_status",
+			httpStatus,
+		)
+	}
 
 	return sendErrorResponseWithStatusCode(httpStatus, vErr, w)
 }
